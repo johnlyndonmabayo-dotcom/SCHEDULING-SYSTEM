@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#162543">
+  <title>ShiftFlow | Employee Registration</title>
+  <style>
+    *{box-sizing:border-box;font-family:Arial,sans-serif}
+    body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:22px;background:#f3f5fa;color:#17233d}
+    .card{width:100%;max-width:540px;background:#fff;border:1px solid #e4e8f0;border-radius:18px;padding:30px;box-shadow:0 12px 35px rgba(22,37,67,.08)}
+    .brand{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:12px}
+    .brand-mark{width:44px;height:44px;border-radius:12px;background:#2949a8;color:#fff;display:grid;place-items:center;font-size:25px;font-weight:700}
+    .brand-name{font-size:27px;font-weight:700;color:#17233d}
+    .subtitle{text-align:center;color:#667085;margin:0 0 24px;line-height:1.5}
+    h1{font-size:23px;margin:0 0 8px}
+    .intro{color:#667085;font-size:14px;line-height:1.5;margin:0 0 20px}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
+    label{display:block;font-weight:600;font-size:14px;margin:13px 0 7px;color:#344054}
+    input{width:100%;padding:13px 12px;border:1px solid #d0d5dd;border-radius:9px;font-size:16px;background:#fff;color:#17233d}
+    input:focus{outline:3px solid rgba(41,73,168,.13);border-color:#2949a8}
+    .hint{font-size:12px;color:#667085;line-height:1.5;margin-top:6px}
+    button{width:100%;margin-top:22px;padding:14px;border:0;border-radius:9px;background:#2949a8;color:#fff;font-size:16px;font-weight:700;cursor:pointer}
+    button:disabled{opacity:.6;cursor:not-allowed}
+    #message{display:none;margin-top:15px;padding:12px;border-radius:8px;font-size:14px;line-height:1.5;overflow-wrap:anywhere}
+    #message.error{display:block;background:#fef3f2;color:#b42318}
+    #message.success{display:block;background:#ecfdf3;color:#027a48}
+    .footer{text-align:center;color:#667085;font-size:14px;margin:20px 0 0;line-height:1.7}
+    a{color:#2949a8;font-weight:600;text-decoration:none}
+    @media(max-width:480px){.card{padding:23px 18px}.grid{grid-template-columns:1fr}.brand-name{font-size:24px}}
+  </style>
+</head>
+<body>
+  <main class="card">
+    <div class="brand"><div class="brand-mark">S</div><div class="brand-name">SCHEDULING</div></div>
+    <p class="subtitle">Employee Scheduling System</p>
+    <h1>Employee Registration</h1>
+    <p class="intro">Create your employee account. An administrator must activate your employee record before you can be assigned to shifts.</p>
+
+    <form id="registerForm">
+      <label for="fullName">Full name</label>
+      <input id="fullName" name="fullName" type="text" maxlength="100" autocomplete="name" placeholder="Enter your full name" required>
+
+      <div class="grid">
+        <div>
+          <label for="position">Position</label>
+          <input id="position" name="position" type="text" maxlength="100" placeholder="e.g. Cashier" required>
+        </div>
+        <div>
+          <label for="department">Department</label>
+          <input id="department" name="department" type="text" maxlength="100" placeholder="e.g. Operations" required>
+        </div>
+      </div>
+
+      <label for="email">Email address</label>
+      <input id="email" name="email" type="email" autocomplete="email" maxlength="254" placeholder="you@example.com" required>
+
+      <div class="grid">
+        <div>
+          <label for="password">Password</label>
+          <input id="password" name="password" type="password" minlength="8" autocomplete="new-password" placeholder="At least 8 characters" required>
+        </div>
+        <div>
+          <label for="confirmPassword">Confirm password</label>
+          <input id="confirmPassword" name="confirmPassword" type="password" minlength="8" autocomplete="new-password" placeholder="Repeat password" required>
+        </div>
+      </div>
+      <p class="hint">Use at least 8 characters. Keep your password private.</p>
+
+      <button id="registerButton" type="submit">Register Employee</button>
+      <p id="message" role="status" aria-live="polite"></p>
+    </form>
+
+    <p class="footer">Already registered? <a href="login.html">Log in</a><br><a href="../index.html">Back to ShiftFlow</a></p>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../database/supabase.js"></script>
+  <script>
+    const form = document.getElementById('registerForm');
+    const button = document.getElementById('registerButton');
+    const message = document.getElementById('message');
+
+    function showMessage(text, type) {
+      message.textContent = text;
+      message.className = type;
+    }
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      message.textContent = '';
+      message.className = '';
+
+      const fullName = document.getElementById('fullName').value.trim();
+      const position = document.getElementById('position').value.trim();
+      const department = document.getElementById('department').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      const confirmPassword = document.getElementById('confirmPassword').value;
+
+      if (!fullName || !position || !department || !email || !password || !confirmPassword) {
+        showMessage('Please complete every field.', 'error');
+        return;
+      }
+      if (password.length < 8) {
+        showMessage('Your password must be at least 8 characters long.', 'error');
+        return;
+      }
+      if (password !== confirmPassword) {
+        showMessage('The passwords do not match.', 'error');
+        document.getElementById('confirmPassword').focus();
+        return;
+      }
+
+      button.disabled = true;
+      button.textContent = 'Registering...';
+
+      try {
+        if (typeof supabaseClient === 'undefined') {
+          throw new Error('Supabase did not load. Check your internet connection and script path.');
+        }
+
+        const { data, error } = await supabaseClient.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              full_name: fullName,
+              position,
+              department
+            },
+            emailRedirectTo: window.location.origin + '/page/login.html'
+          }
+        });
+        if (error) throw error;
+
+        form.reset();
+        if (data.session) {
+          showMessage('Registration submitted successfully. Your employee record is pending administrator activation. You can now log in.', 'success');
+        } else {
+          showMessage('Registration submitted. Check your email for a confirmation link if email confirmation is enabled. Your employee record will remain inactive until an administrator activates it.', 'success');
+        }
+      } catch (error) {
+        console.error('Employee registration failed:', error);
+        showMessage(error.message || 'Registration failed. Please try again.', 'error');
+      } finally {
+        button.disabled = false;
+        button.textContent = 'Register Employee';
+      }
+    });
+  </script>
+</body>
+</html>

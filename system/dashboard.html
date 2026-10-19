@@ -1,0 +1,632 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SCHEDULING | Dashboard</title>
+    <link rel="stylesheet" href="css/style.css">
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="database/supabase.js"></script>
+</head>
+<body>
+<div class="app">
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="brand-icon">S</div>
+            <span>SCHEDULING</span>
+        </div>
+
+        <p class="menu-label">WORKSPACE</p>
+
+        <a href="dashboard.html" class="nav-link active" id="dashboardNav">
+            <span>▦</span> Dashboard
+        </a>
+        <a href="#schedules" class="nav-link" id="schedulesNav">
+            <span>▤</span> Schedules
+        </a>
+        <a href="#employees" class="nav-link" id="employeesNav" hidden>
+            <span>♙</span> Employees
+        </a>
+        <a href="schedule.html" class="nav-link" id="createScheduleNav" hidden>
+            <span>＋</span> Create Schedule
+        </a>
+
+        <div class="sidebar-bottom">
+            <div class="user-avatar" id="avatar">U</div>
+            <div class="user-info">
+                <strong id="userName">Loading...</strong>
+                <small id="userRole">User</small>
+            </div>
+            <button id="logoutBtn" class="logout-btn"
+                aria-label="Log out" title="Log out">↪</button>
+        </div>
+    </aside>
+
+    <main class="main">
+        <header class="topbar">
+            <div>
+                <p class="eyebrow">WORKSPACE / OVERVIEW</p>
+                <h1>Dashboard</h1>
+                <p class="subtitle">Welcome back! Here's your scheduling overview.</p>
+            </div>
+            <div class="today" id="todayDate"></div>
+        </header>
+
+        <div id="message" class="message" role="status"
+            aria-live="polite" hidden></div>
+
+        <section class="stats">
+            <article class="stat-card">
+                <div class="stat-top">
+                    <span>Total Employees</span>
+                    <span class="stat-icon blue">♙</span>
+                </div>
+                <h2 id="employeeCount">—</h2>
+                <p>Registered employees</p>
+            </article>
+
+            <article class="stat-card">
+                <div class="stat-top">
+                    <span>Total Schedules</span>
+                    <span class="stat-icon purple">▦</span>
+                </div>
+                <h2 id="scheduleCount">—</h2>
+                <p>All registered shifts</p>
+            </article>
+
+            <article class="stat-card">
+                <div class="stat-top">
+                    <span>Pending Schedules</span>
+                    <span class="stat-icon orange">◷</span>
+                </div>
+                <h2 id="pendingCount">—</h2>
+                <p>Awaiting confirmation</p>
+            </article>
+        </section>
+
+        <section class="panel" id="schedules">
+            <div class="panel-header">
+                <div>
+                    <h2>All Schedules</h2>
+                    <p>Overview of employee shifts</p>
+                </div>
+                <div style="display:flex;gap:10px;flex-wrap:wrap">
+                    <a href="schedule.html" class="refresh-btn" style="text-decoration:none;display:inline-flex;align-items:center">+ Create Schedule</a>
+                    <button class="refresh-btn" id="refreshBtn" type="button">Refresh</button>
+                </div>
+            </div>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>EMPLOYEE ID</th>
+                            <th>WORK DATE</th>
+                            <th>SHIFT</th>
+                            <th>TIME</th>
+                            <th>STATUS</th>
+                        </tr>
+                    </thead>
+                    <tbody id="scheduleRows">
+                        <tr>
+                            <td colspan="5" class="empty">Loading schedules...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="panel" id="employees" hidden>
+            <div class="panel-header">
+                <div>
+                    <h2>Employee Management</h2>
+                    <p>View registered employee records</p>
+                </div>
+                <button class="refresh-btn" id="refreshEmployeesBtn">Refresh</button>
+            </div>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>EMPLOYEE ID</th>
+                            <th>FULL NAME</th>
+                            <th>POSITION</th>
+                            <th>DEPARTMENT</th>
+                            <th>STATUS</th>
+                        </tr>
+                    </thead>
+                    <tbody id="employeeRows">
+                        <tr>
+                            <td colspan="5" class="empty">Loading employees...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <footer>
+            <span>ShiftFlow</span>
+            <span>Employee Scheduling System</span>
+        </footer>
+    </main>
+</div>
+
+<script>
+"use strict";
+
+const message = document.getElementById("message");
+
+function showMessage(text) {
+    message.textContent = text;
+    message.hidden = false;
+    message.classList.add("visible");
+}
+
+function hideMessage() {
+    message.textContent = "";
+    message.hidden = true;
+    message.classList.remove("visible");
+}
+
+function formatDate(dateString) {
+    if (!dateString) return "—";
+
+    const parts = dateString.split("-");
+    if (parts.length !== 3) return dateString;
+
+    const date = new Date(
+        Number(parts[0]),
+        Number(parts[1]) - 1,
+        Number(parts[2])
+    );
+
+    return date.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric"
+    });
+}
+
+function setActiveNav(activeId) {
+    document.querySelectorAll(".nav-link").forEach(link => {
+        link.classList.toggle("active", link.id === activeId);
+    });
+}
+
+function addCell(row, value) {
+    const cell = document.createElement("td");
+    cell.textContent = value ?? "—";
+    row.appendChild(cell);
+}
+
+function addStatusCell(row, value) {
+    const cell = document.createElement("td");
+    const badge = document.createElement("span");
+
+    const status = String(value || "Unknown");
+    badge.className = "status " + status.toLowerCase();
+    badge.textContent = status;
+
+    cell.appendChild(badge);
+    row.appendChild(cell);
+}
+
+document.getElementById("todayDate").textContent =
+    new Date().toLocaleDateString("en-US", {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+        year: "numeric"
+    });
+
+async function loadDashboard() {
+    hideMessage();
+
+    if (!window.supabase ||
+        typeof supabaseClient === "undefined") {
+        throw new Error(
+            "Supabase did not load. Check the Supabase script path."
+        );
+    }
+
+    const { data, error } = await supabaseClient.auth.getUser();
+
+    if (error) {
+        throw new Error("Login check failed: " + error.message);
+    }
+
+    const user = data.user;
+
+    if (!user) {
+        window.location.replace("page/login.html");
+        return;
+    }
+
+    let profile;
+
+    try {
+        profile = await getMyProfile();
+    } catch (error) {
+        throw new Error(
+            "Profile error: " + (error.message || String(error))
+        );
+    }
+
+    document.getElementById("userName").textContent =
+        profile.full_name || user.email || "User";
+
+    document.getElementById("userRole").textContent =
+        profile.role || "employee";
+
+    document.getElementById("avatar").textContent =
+        (profile.full_name || "U").charAt(0).toUpperCase();
+
+    const employeesNav = document.getElementById("employeesNav");
+    const employeesPanel = document.getElementById("employees");
+    const createScheduleNav = document.getElementById("createScheduleNav");
+
+    if (profile.role === "admin") {
+        employeesNav.hidden = false;
+        employeesPanel.hidden = false;
+        createScheduleNav.hidden = false;
+
+        await loadStats();
+        await loadEmployees();
+    } else if (profile.role === "employee") {
+        employeesNav.hidden = true;
+        employeesPanel.hidden = true;
+        createScheduleNav.hidden = true;
+
+        await loadEmployeeDashboard(user);
+    } else {
+        throw new Error(
+            "Your account role is not recognized. Check your profiles table."
+        );
+    }
+}
+
+async function loadStats() {
+    const [
+        employeesResult,
+        schedulesResult,
+        pendingResult
+    ] = await Promise.all([
+        supabaseClient
+            .from("employees")
+            .select("employee_id", {
+                count: "exact",
+                head: true
+            }),
+
+        // FIX: Load all schedules instead of filtering by today's date.
+        supabaseClient
+            .from("schedules")
+            .select(
+                "schedule_id, employee_id, work_date, start_time, end_time, shift, status"
+            )
+            .order("work_date", { ascending: false })
+            .order("start_time", { ascending: true })
+            .limit(500),
+
+        supabaseClient
+            .from("schedules")
+            .select("schedule_id", {
+                count: "exact",
+                head: true
+            })
+            .eq("status", "Pending")
+    ]);
+
+    if (employeesResult.error) {
+        throw new Error(
+            "Employees query: " + employeesResult.error.message
+        );
+    }
+
+    if (schedulesResult.error) {
+        throw new Error(
+            "Schedules query: " + schedulesResult.error.message
+        );
+    }
+
+    if (pendingResult.error) {
+        throw new Error(
+            "Pending schedules query: " + pendingResult.error.message
+        );
+    }
+
+    const schedules = schedulesResult.data || [];
+
+    document.getElementById("employeeCount").textContent =
+        employeesResult.count ?? 0;
+
+    document.getElementById("scheduleCount").textContent =
+        schedules.length;
+
+    document.getElementById("pendingCount").textContent =
+        pendingResult.count ?? 0;
+
+    const rows = document.getElementById("scheduleRows");
+    rows.replaceChildren();
+
+    if (schedules.length === 0) {
+        const row = document.createElement("tr");
+        const cell = document.createElement("td");
+
+        cell.colSpan = 5;
+        cell.className = "empty";
+        cell.textContent = "No schedules found. Add a schedule to get started.";
+
+        row.appendChild(cell);
+        rows.appendChild(row);
+        return;
+    }
+
+    schedules.forEach(schedule => {
+        const row = document.createElement("tr");
+
+        addCell(row, schedule.employee_id);
+        addCell(row, formatDate(schedule.work_date));
+        addCell(row, schedule.shift);
+
+        addCell(
+            row,
+            (schedule.start_time || "").slice(0, 5) +
+            " - " +
+            (schedule.end_time || "").slice(0, 5)
+        );
+
+        addStatusCell(row, schedule.status);
+        rows.appendChild(row);
+    });
+}
+
+async function loadEmployees() {
+    const rows = document.getElementById("employeeRows");
+
+    rows.innerHTML = `
+        <tr>
+            <td colspan="5" class="empty">Loading employees...</td>
+        </tr>
+    `;
+
+    const { data, error } = await supabaseClient
+        .from("employees")
+        .select("employee_id, full_name, position, department, status")
+        .order("employee_id", { ascending: true });
+
+    if (error) {
+        throw new Error("Employee list error: " + error.message);
+    }
+
+    rows.replaceChildren();
+
+    if (!data || data.length === 0) {
+        const row = document.createElement("tr");
+        const cell = document.createElement("td");
+
+        cell.colSpan = 5;
+        cell.className = "empty";
+        cell.textContent = "No employee records found.";
+
+        row.appendChild(cell);
+        rows.appendChild(row);
+        return;
+    }
+
+    data.forEach(employee => {
+        const row = document.createElement("tr");
+
+        addCell(row, employee.employee_id);
+        addCell(row, employee.full_name);
+        addCell(row, employee.position);
+        addCell(row, employee.department);
+        addStatusCell(row, employee.status);
+
+        rows.appendChild(row);
+    });
+}
+
+async function loadEmployeeDashboard(user) {
+    document.querySelector(".stats").innerHTML = `
+        <article class="stat-card">
+            <div class="stat-top">
+                <span>My Upcoming Schedules</span>
+                <span class="stat-icon blue">▦</span>
+            </div>
+            <h2 id="myScheduleCount">0</h2>
+            <p>Your scheduled shifts</p>
+        </article>
+    `;
+
+    document.querySelector("#schedules h2").textContent = "My Schedules";
+    document.querySelector("#schedules .panel-header p").textContent =
+        "Your upcoming employee shifts";
+
+    document.querySelector("#schedules thead tr").innerHTML = `
+        <th>WORK DATE</th>
+        <th>SHIFT</th>
+        <th>WORKING HOURS</th>
+        <th>STATUS</th>
+    `;
+
+    const rows = document.getElementById("scheduleRows");
+    rows.innerHTML = `
+        <tr>
+            <td colspan="4" class="empty">Loading your schedules...</td>
+        </tr>
+    `;
+
+    // Employee accounts must be linked to employees.user_id.
+    const { data: employee, error: employeeError } = await supabaseClient
+        .from("employees")
+        .select("employee_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+    if (employeeError) {
+        throw new Error(
+            "Could not find your employee account link. Check that the " +
+            "employees table has a user_id column and that your account is linked. " +
+            employeeError.message
+        );
+    }
+
+    if (!employee) {
+        rows.innerHTML = `
+            <tr>
+                <td colspan="4" class="empty">
+                    Your login works, but your employee record is not linked yet.
+                    Ask your administrator to link your Auth user ID.
+                </td>
+            </tr>
+        `;
+
+        document.getElementById("myScheduleCount").textContent = "0";
+        return;
+    }
+
+    const { data: schedules, error: scheduleError } = await supabaseClient
+        .from("schedules")
+        .select("work_date, start_time, end_time, shift, status")
+        .eq("employee_id", employee.employee_id)
+        .gte("work_date", getTodayString())
+        .order("work_date", { ascending: true })
+        .order("start_time", { ascending: true });
+
+    if (scheduleError) {
+        throw new Error(
+            "Could not load your schedules: " + scheduleError.message
+        );
+    }
+
+    const mySchedules = schedules || [];
+    document.getElementById("myScheduleCount").textContent =
+        mySchedules.length;
+
+    rows.replaceChildren();
+
+    if (mySchedules.length === 0) {
+        rows.innerHTML = `
+            <tr>
+                <td colspan="4" class="empty">You have no upcoming schedules.</td>
+            </tr>
+        `;
+        return;
+    }
+
+    mySchedules.forEach(schedule => {
+        const row = document.createElement("tr");
+
+        addCell(row, formatDate(schedule.work_date));
+        addCell(row, schedule.shift);
+
+        addCell(
+            row,
+            (schedule.start_time || "").slice(0, 5) +
+            " - " +
+            (schedule.end_time || "").slice(0, 5)
+        );
+
+        addStatusCell(row, schedule.status);
+        rows.appendChild(row);
+    });
+}
+
+function getTodayString() {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Asia/Manila",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit"
+    }).formatToParts(new Date());
+
+    const values = {};
+
+    parts.forEach(part => {
+        if (part.type !== "literal") {
+            values[part.type] = part.value;
+        }
+    });
+
+    return `${values.year}-${values.month}-${values.day}`;
+}
+
+/* Navigation */
+document.getElementById("dashboardNav").addEventListener("click", () => {
+    setActiveNav("dashboardNav");
+});
+
+document.getElementById("schedulesNav").addEventListener("click", event => {
+    event.preventDefault();
+    setActiveNav("schedulesNav");
+    document.getElementById("schedules").scrollIntoView({ behavior: "smooth" });
+});
+
+document.getElementById("employeesNav").addEventListener("click", event => {
+    event.preventDefault();
+    const panel = document.getElementById("employees");
+    if (panel.hidden) {
+        showMessage("Employee management is available to administrators only.");
+        return;
+    }
+    setActiveNav("employeesNav");
+    panel.scrollIntoView({ behavior: "smooth" });
+});
+
+
+
+/* Refresh all dashboard data */
+document.getElementById("refreshBtn").addEventListener("click", async () => {
+    const button = document.getElementById("refreshBtn");
+    button.disabled = true;
+
+    try {
+        await loadDashboard();
+    } catch (error) {
+        showMessage(error.message || String(error));
+    } finally {
+        button.disabled = false;
+    }
+});
+
+document.getElementById("refreshEmployeesBtn").addEventListener(
+    "click",
+    async () => {
+        const button = document.getElementById("refreshEmployeesBtn");
+        button.disabled = true;
+
+        try {
+            await loadEmployees();
+        } catch (error) {
+            showMessage(error.message || String(error));
+        } finally {
+            button.disabled = false;
+        }
+    }
+);
+
+/* Logout */
+document.getElementById("logoutBtn").addEventListener("click", async () => {
+    const button = document.getElementById("logoutBtn");
+    button.disabled = true;
+
+    try {
+        await signOutUser();
+        window.location.replace("page/login.html");
+    } catch (error) {
+        showMessage("Logout failed: " + (error.message || String(error)));
+        button.disabled = false;
+    }
+});
+
+/* Start dashboard */
+loadDashboard().catch(error => {
+    showMessage(error.message || String(error));
+});
+</script>
+</body>
+</html>

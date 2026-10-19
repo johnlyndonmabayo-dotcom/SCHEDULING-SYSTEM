@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0">
+
+    <title>ShiftFlow | Login</title>
+
+
+    <style>
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
+
+        body {
+
+            min-height: 100vh;
+
+            display: flex;
+
+            justify-content: center;
+
+            align-items: center;
+
+            padding: 20px;
+
+            background: #f1f5f9;
+
+        }
+
+
+        .login-container {
+
+            width: 100%;
+
+            max-width: 400px;
+
+            padding: 32px 25px;
+
+            background: white;
+
+            border-radius: 16px;
+
+            box-shadow:
+                0 8px 30px
+                rgba(0, 0, 0, 0.08);
+
+        }
+
+
+        .logo {
+
+            text-align: center;
+
+            font-size: 30px;
+
+            font-weight: bold;
+
+            color: #2563eb;
+
+            margin-bottom: 8px;
+
+        }
+
+
+        .subtitle {
+
+            text-align: center;
+
+            color: #64748b;
+
+            margin-bottom: 28px;
+
+        }
+
+
+        label {
+
+            display: block;
+
+            margin: 15px 0 8px;
+
+            font-weight: 600;
+
+            color: #334155;
+
+        }
+
+
+        input {
+
+            width: 100%;
+
+            padding: 13px;
+
+            border:
+                1px solid #cbd5e1;
+
+            border-radius: 8px;
+
+            font-size: 16px;
+
+            outline: none;
+
+        }
+
+
+        input:focus {
+
+            border-color: #2563eb;
+
+        }
+
+
+        button {
+
+            width: 100%;
+
+            padding: 14px;
+
+            margin-top: 22px;
+
+            background: #2563eb;
+
+            color: white;
+
+            border: none;
+
+            border-radius: 8px;
+
+            font-size: 16px;
+
+            font-weight: bold;
+
+            cursor: pointer;
+
+        }
+
+
+        button:disabled {
+
+            opacity: 0.6;
+
+            cursor: not-allowed;
+
+        }
+
+
+        #message {
+
+            margin-top: 16px;
+
+            font-size: 14px;
+
+            line-height: 1.5;
+
+            overflow-wrap: anywhere;
+
+        }
+
+
+        .help {
+
+            text-align: center;
+
+            font-size: 13px;
+
+            color: #64748b;
+
+            margin-top: 20px;
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+<div class="login-container">
+
+
+    <div class="logo">
+        SCHEDULING
+    </div>
+
+
+    <p class="subtitle">
+        Employee Scheduling System
+    </p>
+
+
+    <form id="loginForm">
+
+
+        <label for="email">
+            Email Address
+        </label>
+
+
+        <input
+            type="email"
+            id="email"
+            placeholder="Enter your email"
+            autocomplete="username"
+            required>
+
+
+        <label for="password">
+            Password
+        </label>
+
+
+        <input
+            type="password"
+            id="password"
+            placeholder="Enter your password"
+            autocomplete="current-password"
+            required>
+
+
+        <button
+            type="submit"
+            id="loginButton">
+
+            Log In
+
+        </button>
+
+
+        <p
+            id="message"
+            role="status"
+            aria-live="polite">
+        </p>
+
+
+    </form>
+
+
+    <p class="help">
+        Use your ShiftFlow account credentials.
+        <br><br>
+        New employee? <a href="register.html" style="color:#2563eb;font-weight:bold;text-decoration:none">Register here</a>.
+    </p>
+
+
+</div>
+
+
+<!-- Supabase -->
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+
+<!-- IMPORTANT:
+     login.html is inside the page folder,
+     so we use ../ to go back to the main folder.
+-->
+
+<script src="../database/supabase.js"></script>
+
+
+<script>
+
+
+const loginForm =
+    document.getElementById(
+        "loginForm"
+    );
+
+
+const loginButton =
+    document.getElementById(
+        "loginButton"
+    );
+
+
+const message =
+    document.getElementById(
+        "message"
+    );
+
+
+loginForm.addEventListener("submit", async function(event) {
+    event.preventDefault();
+
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value;
+
+    loginButton.disabled = true;
+    loginButton.textContent = "Signing in...";
+    message.textContent = "";
+    message.style.color = "#dc2626";
+
+    try {
+        if (!window.supabase || typeof supabaseClient === "undefined") {
+            throw new Error("Supabase did not load. Check your internet connection and script paths.");
+        }
+
+        const loginResult = await signInUser(email, password);
+
+        if (!loginResult || !loginResult.session || !loginResult.session.access_token) {
+            throw new Error("Login did not create a session. Check your Supabase Auth settings and try again.");
+        }
+
+        const { data: sessionData, error: sessionError } =
+            await supabaseClient.auth.getSession();
+
+        if (sessionError) throw sessionError;
+
+        if (!sessionData.session) {
+            throw new Error("Your login session was not saved in this browser. Try opening ShiftFlow in a regular browser tab.");
+        }
+
+        const profile = await getMyProfile();
+
+        if (!profile || !["admin", "employee"].includes(profile.role)) {
+            throw new Error("Your profile is missing or its role is invalid. Check public.profiles for this user's ID and role (admin or employee).");
+        }
+
+        message.style.color = "#15803d";
+        message.textContent = "Login successful! Opening ShiftFlow...";
+        window.location.replace("../dashboard.html");
+
+    } catch (error) {
+        message.textContent = error && error.message
+            ? error.message
+            : "Login failed. Please try again.";
+
+        loginButton.disabled = false;
+        loginButton.textContent = "Log In";
+    }
+});
+
+
+</script>
+
+
+</body>
+
+</html>

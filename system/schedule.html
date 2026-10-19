@@ -1,0 +1,810 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShiftFlow | Create Schedule</title>
+
+    <link rel="stylesheet" href="css/style.css">
+
+    <style>
+        .schedule-page {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        .schedule-form {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            min-width: 0;
+        }
+
+        .form-group.full {
+            grid-column: 1 / -1;
+        }
+
+        .form-group label {
+            color: #344054;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .form-group input,
+        .form-group select {
+            box-sizing: border-box;
+            width: 100%;
+            min-height: 46px;
+            padding: 11px 13px;
+            border: 1px solid #d0d5dd;
+            border-radius: 9px;
+            background: #fff;
+            color: #17233f;
+            font: inherit;
+            outline: none;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            border-color: #2949a8;
+            box-shadow: 0 0 0 3px rgba(41, 73, 168, 0.12);
+        }
+
+        .form-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 24px;
+        }
+
+        .primary-btn,
+        .secondary-btn {
+            min-height: 44px;
+            padding: 11px 20px;
+            border-radius: 9px;
+            font: inherit;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .primary-btn {
+            border: 1px solid #2949a8;
+            background: #2949a8;
+            color: white;
+        }
+
+        .primary-btn:hover {
+            background: #203b8b;
+        }
+
+        .primary-btn:disabled {
+            opacity: 0.6;
+            cursor: wait;
+        }
+
+        .secondary-btn {
+            border: 1px solid #d0d5dd;
+            background: white;
+            color: #2949a8;
+        }
+
+        .page-message {
+            margin: 16px 0;
+            padding: 12px 14px;
+            border-radius: 9px;
+            overflow-wrap: anywhere;
+        }
+
+        .page-message.success {
+            background: #ecfdf3;
+            color: #027a48;
+        }
+
+        .page-message.error {
+            background: #fef3f2;
+            color: #b42318;
+        }
+
+        .page-message.info {
+            background: #eff6ff;
+            color: #1d4ed8;
+        }
+
+        .row-action {
+            border: 1px solid #d0d5dd;
+            border-radius: 7px;
+            padding: 6px 9px;
+            margin: 2px;
+            background: #fff;
+            color: #344054;
+            font: inherit;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .approve-action { color: #027a48; border-color: #abefc6; }
+        .cancel-action { color: #b42318; border-color: #fecdca; }
+        .row-action:disabled { opacity: .6; cursor: wait; }
+
+        .status-badge {
+            display: inline-block;
+            padding: 6px 11px;
+            border-radius: 20px;
+            background: #fff4df;
+            color: #a66b08;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .table-wrap {
+            overflow-x: auto;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-bottom: 18px;
+            color: #2949a8;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+
+        .help-text {
+            color: #667085;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        @media (max-width: 650px) {
+            .schedule-form {
+                grid-template-columns: 1fr;
+            }
+
+            .form-group.full {
+                grid-column: auto;
+            }
+
+            .form-actions > button {
+                width: 100%;
+            }
+        }
+    </style>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="database/supabase.js"></script>
+</head>
+
+<body>
+
+<div class="app">
+
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="brand-icon">S</div>
+            <span>ShiftFlow</span>
+        </div>
+
+        <p class="menu-label">WORKSPACE</p>
+
+        <a href="dashboard.html" class="nav-link">
+            <span>▦</span>
+            Dashboard
+        </a>
+
+        <a href="schedule.html" class="nav-link active">
+            <span>▤</span>
+            Schedules
+        </a>
+
+        <a href="index.html#employees" class="nav-link">
+            <span>♙</span>
+            Employees
+        </a>
+
+        <div class="sidebar-bottom">
+            <div class="user-avatar" id="avatar">U</div>
+
+            <div class="user-info">
+                <strong id="userName">Loading...</strong>
+                <small id="userRole">User</small>
+            </div>
+
+            <button id="logoutBtn"
+                    class="logout-btn"
+                    type="button"
+                    aria-label="Log out"
+                    title="Log out">
+                ↪
+            </button>
+        </div>
+    </aside>
+
+    <main class="main schedule-page">
+
+        <header class="topbar">
+            <div>
+                <p class="eyebrow">WORKSPACE / SCHEDULING</p>
+                <h1>Create Schedule</h1>
+                <p class="subtitle">
+                    Assign an employee to a work shift.
+                </p>
+            </div>
+        </header>
+
+        <a href="dashboard.html" class="back-link">
+            ← Back to Dashboard
+        </a>
+
+        <div id="pageMessage"
+             class="page-message info"
+             role="status"
+             aria-live="polite"
+             hidden></div>
+
+        <section class="panel">
+            <div class="panel-header">
+                <div>
+                    <h2>New Work Schedule</h2>
+                    <p>Complete the details below.</p>
+                </div>
+            </div>
+
+            <div style="padding: 24px;">
+                <form id="scheduleForm">
+
+                    <div class="schedule-form">
+
+                        <div class="form-group full">
+                            <label for="employeeId">Employee</label>
+                            <select id="employeeId" required>
+                                <option value="">Loading employees...</option>
+                            </select>
+                            <small class="help-text">
+                                Only active employees are listed.
+                            </small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="workDate">Work Date</label>
+                            <input type="date"
+                                   id="workDate"
+                                   required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="shift">Shift</label>
+                            <select id="shift" required>
+                                <option value="">Select shift</option>
+                                <option value="Morning">Morning</option>
+                                <option value="Afternoon">Afternoon</option>
+                                <option value="Night">Night</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="startTime">Start Time</label>
+                            <input type="time"
+                                   id="startTime"
+                                   value="09:00"
+                                   required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="endTime">End Time</label>
+                            <input type="time"
+                                   id="endTime"
+                                   value="17:00"
+                                   required>
+                        </div>
+
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit"
+                                class="primary-btn"
+                                id="saveBtn">
+                            Create Schedule
+                        </button>
+
+                        <button type="reset"
+                                class="secondary-btn"
+                                id="resetBtn">
+                            Clear Form
+                        </button>
+                    </div>
+
+                </form>
+            </div>
+        </section>
+
+        <section class="panel" style="margin-top: 24px;">
+            <div class="panel-header">
+                <div>
+                    <h2>Recently Created Schedules</h2>
+                    <p>Latest records saved in your database.</p>
+                </div>
+
+                <button type="button"
+                        class="refresh-btn"
+                        id="refreshBtn">
+                    Refresh
+                </button>
+            </div>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>EMPLOYEE ID</th>
+                            <th>WORK DATE</th>
+                            <th>SHIFT</th>
+                            <th>TIME</th>
+                            <th>STATUS</th>
+                            <th>ACTIONS</th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="scheduleRows">
+                        <tr>
+                            <td colspan="6" class="empty">
+                                Loading schedules...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <footer>
+            <span>ShiftFlow</span>
+            <span>Employee Scheduling System</span>
+        </footer>
+
+    </main>
+</div>
+
+<script>
+"use strict";
+
+const form = document.getElementById("scheduleForm");
+const employeeSelect = document.getElementById("employeeId");
+const workDateInput = document.getElementById("workDate");
+const shiftInput = document.getElementById("shift");
+const startTimeInput = document.getElementById("startTime");
+const endTimeInput = document.getElementById("endTime");
+const saveBtn = document.getElementById("saveBtn");
+const messageBox = document.getElementById("pageMessage");
+const scheduleRows = document.getElementById("scheduleRows");
+
+let currentProfile = null;
+
+function showMessage(message, type = "info") {
+    messageBox.textContent = message;
+    messageBox.className = "page-message " + type;
+    messageBox.hidden = false;
+}
+
+function hideMessage() {
+    messageBox.textContent = "";
+    messageBox.hidden = true;
+}
+
+function getManilaToday() {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Asia/Manila",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit"
+    }).formatToParts(new Date());
+
+    const values = {};
+
+    parts.forEach(part => {
+        values[part.type] = part.value;
+    });
+
+    return `${values.year}-${values.month}-${values.day}`;
+}
+
+function formatWorkDate(dateString) {
+    if (!dateString) return "—";
+
+    const parts = dateString.split("-").map(Number);
+    const date = new Date(parts[0], parts[1] - 1, parts[2]);
+
+    return date.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric"
+    });
+}
+
+function escapeHTML(value) {
+    return String(value ?? "").replace(/[&<>"']/g, character => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+    })[character]);
+}
+
+async function checkLogin() {
+    const { data, error } = await supabaseClient.auth.getSession();
+
+    if (error) throw error;
+
+    if (!data.session) {
+        window.location.replace("page/login.html");
+        return false;
+    }
+
+    currentProfile = await getMyProfile();
+
+    if (!currentProfile || !["admin", "employee"].includes(currentProfile.role)) {
+        document.body.innerHTML = `
+            <main style="max-width:600px;margin:80px auto;padding:24px;
+                        font-family:Arial,sans-serif;color:#17233f;">
+                <h1>Access denied</h1>
+                <p>Please sign in with a valid ShiftFlow account.</p>
+                <a href="page/login.html">Return to login</a>
+            </main>`;
+        return false;
+    }
+
+    const name = currentProfile.full_name || (currentProfile.role === "admin" ? "Administrator" : "Employee");
+    const isAdmin = currentProfile.role === "admin";
+    document.querySelector(".topbar h1").textContent = isAdmin ? "Create Schedule" : "Set My Schedule";
+    document.querySelector(".topbar .subtitle").textContent = isAdmin
+        ? "Assign an employee to a work shift."
+        : "Choose a date and shift for your own schedule.";
+    document.querySelector(".panel-header p").textContent = isAdmin
+        ? "Complete the details below."
+        : "Your schedule will be submitted as Pending for administrator review.";
+    document.querySelector('label[for="employeeId"]').textContent = isAdmin ? "Employee" : "Your Employee Account";
+    document.querySelector(".help-text").textContent = isAdmin
+        ? "Only active employees are listed."
+        : "Employees can only schedule themselves.";
+    saveBtn.textContent = isAdmin ? "Create Schedule" : "Submit My Schedule";
+    document.getElementById("userRole").textContent = currentProfile.role;
+    document.getElementById("userName").textContent = name;
+    document.getElementById("avatar").textContent = name.trim().charAt(0).toUpperCase() || "E";
+
+    document.getElementById("userName").textContent = name;
+    document.getElementById("userRole").textContent = currentProfile.role;
+    document.getElementById("avatar").textContent =
+        name.trim().charAt(0).toUpperCase() || "A";
+
+    return true;
+}
+
+async function loadEmployees() {
+    employeeSelect.innerHTML =
+        '<option value="">Loading employees...</option>';
+
+    let query = supabaseClient
+        .from("employees")
+        .select("employee_id, full_name, position, department, status, user_id")
+        .eq("status", "Active")
+        .order("full_name", { ascending: true });
+
+    // Employees may only choose their own linked employee record.
+    if (currentProfile.role === "employee") {
+        const { data: authData, error: authError } = await supabaseClient.auth.getUser();
+        if (authError) throw authError;
+        query = query.eq("user_id", authData.user.id);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    employeeSelect.innerHTML =
+        '<option value="">Select an employee</option>';
+
+    (data || []).forEach(employee => {
+        const option = document.createElement("option");
+
+        option.value = employee.employee_id;
+        option.textContent =
+            `${employee.full_name} (ID: ${employee.employee_id})`;
+
+        employeeSelect.appendChild(option);
+    });
+
+    if (currentProfile.role === "employee") {
+        employeeSelect.disabled = true;
+        if (data && data.length > 0) {
+            employeeSelect.value = String(data[0].employee_id);
+        } else {
+            employeeSelect.innerHTML = '<option value="">Your account is not active yet</option>';
+            saveBtn.disabled = true;
+            showMessage(
+                "Your employee account is not active or is not linked to your login. Ask an administrator to activate/link your employee record before setting a schedule.",
+                "error"
+            );
+        }
+    } else if (!data || data.length === 0) {
+        employeeSelect.innerHTML = '<option value="">No active employees found</option>';
+        showMessage("There are no active employees. Add or activate an employee before creating a schedule.", "info");
+    }
+}
+
+async function loadSchedules() {
+    scheduleRows.innerHTML = `
+        <tr>
+            <td colspan="6" class="empty">Loading schedules...</td>
+        </tr>`;
+
+    const { data, error } = await supabaseClient
+        .from("schedules")
+        .select("schedule_id, employee_id, work_date, start_time, end_time, shift, status")
+        .order("work_date", { ascending: false })
+        .order("start_time", { ascending: true })
+        .limit(10);
+
+    if (error) throw error;
+
+    if (!data || data.length === 0) {
+        scheduleRows.innerHTML = `
+            <tr>
+                <td colspan="6" class="empty">
+                    No schedules found.
+                </td>
+            </tr>`;
+        return;
+    }
+
+    scheduleRows.innerHTML = data.map(schedule => {
+        const start = String(schedule.start_time || "").slice(0, 5);
+        const end = String(schedule.end_time || "").slice(0, 5);
+        const status = schedule.status || "Pending";
+
+        const statusKey = String(status).toLowerCase();
+        const actions = currentProfile.role !== "admin"
+            ? "—"
+            : statusKey === "pending"
+                ? `<button type="button" class="row-action approve-action" data-action="approve" data-id="${Number(schedule.schedule_id)}">Approve</button>
+                   <button type="button" class="row-action cancel-action" data-action="reject" data-id="${Number(schedule.schedule_id)}">Reject</button>`
+                : `<button type="button" class="row-action cancel-action" data-action="cancel" data-id="${Number(schedule.schedule_id)}">Cancel</button>`;
+        return `
+            <tr>
+                <td>${escapeHTML(schedule.employee_id)}</td>
+                <td>${escapeHTML(formatWorkDate(schedule.work_date))}</td>
+                <td>${escapeHTML(schedule.shift)}</td>
+                <td>${escapeHTML(start)} - ${escapeHTML(end)}</td>
+                <td><span class="status-badge ${escapeHTML(statusKey)}">${escapeHTML(status)}</span></td>
+                <td>${statusKey === "cancelled" || statusKey === "rejected" ? "—" : actions}</td>
+            </tr>`;
+    }).join("");
+}
+
+form.addEventListener("submit", async function(event) {
+    event.preventDefault();
+    hideMessage();
+
+    if (!currentProfile || !["admin", "employee"].includes(currentProfile.role)) {
+        showMessage("Please sign in with a valid ShiftFlow account.", "error");
+        return;
+    }
+
+    const employeeId = employeeSelect.value;
+    const workDate = workDateInput.value;
+    const shift = shiftInput.value;
+    const startTime = startTimeInput.value;
+    const endTime = endTimeInput.value;
+
+    if (!employeeId || !workDate || !shift || !startTime || !endTime) {
+        showMessage("Please complete all fields.", "error");
+        return;
+    }
+
+    if (endTime <= startTime) {
+        showMessage(
+            "End time must be later than start time. For an overnight shift, use separate dates or adjust the form to support overnight shifts.",
+            "error"
+        );
+        return;
+    }
+
+    saveBtn.disabled = true;
+    saveBtn.textContent = "Saving...";
+
+    try {
+        let safeEmployeeId = Number(employeeId);
+        if (currentProfile.role === "employee") {
+            const { data: authData, error: authError } = await supabaseClient.auth.getUser();
+            if (authError) throw authError;
+            const { data: ownEmployee, error: ownEmployeeError } = await supabaseClient
+                .from("employees")
+                .select("employee_id, status")
+                .eq("user_id", authData.user.id)
+                .maybeSingle();
+            if (ownEmployeeError) throw ownEmployeeError;
+            if (!ownEmployee || ownEmployee.status !== "Active" || Number(ownEmployee.employee_id) !== safeEmployeeId) {
+                throw new Error("Your employee account must be active and linked before you can set a schedule.");
+            }
+            safeEmployeeId = Number(ownEmployee.employee_id);
+        }
+
+        const newSchedule = {
+            employee_id: safeEmployeeId,
+            work_date: workDate,
+            start_time: startTime,
+            end_time: endTime,
+            shift: shift,
+            status: "Pending"
+        };
+
+        // Prevent overlapping shifts for the same employee on the same date.
+        const { data: existingSchedules, error: conflictError } =
+            await supabaseClient
+                .from("schedules")
+                .select("schedule_id, start_time, end_time, status")
+                .eq("employee_id", safeEmployeeId)
+                .eq("work_date", workDate);
+
+        if (conflictError) throw conflictError;
+
+        const toMinutes = value => {
+            const parts = String(value || "").slice(0, 5).split(":").map(Number);
+            return parts[0] * 60 + parts[1];
+        };
+
+        const startMinutes = toMinutes(startTime);
+        const endMinutes = toMinutes(endTime);
+        const conflictingSchedule = (existingSchedules || []).find(item => {
+            const existingStatus = String(item.status || "Pending").toLowerCase();
+            if (["cancelled", "rejected"].includes(existingStatus)) return false;
+            return startMinutes < toMinutes(item.end_time) &&
+                endMinutes > toMinutes(item.start_time);
+        });
+
+        if (conflictingSchedule) {
+            showMessage(
+                "This employee already has a shift that overlaps this time. Choose another time or date.",
+                "error"
+            );
+            return;
+        }
+
+        const { error } = await supabaseClient
+            .from("schedules")
+            .insert([newSchedule]);
+
+        if (error) throw error;
+
+        showMessage(
+            "Schedule created successfully! Its status is Pending.",
+            "success"
+        );
+
+        form.reset();
+        if (currentProfile.role === "employee") {
+            employeeSelect.value = String(safeEmployeeId);
+        }
+        workDateInput.value = getManilaToday();
+        startTimeInput.value = "09:00";
+        endTimeInput.value = "17:00";
+
+        await loadSchedules();
+
+    } catch (error) {
+        console.error("Create schedule error:", error);
+
+        showMessage(
+            "Could not create the schedule: " +
+            (error.message || "Unknown error") +
+            ". Check your Supabase table columns and Row Level Security policies.",
+            "error"
+        );
+    } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = "Create Schedule";
+    }
+});
+
+scheduleRows.addEventListener("click", async event => {
+    const button = event.target.closest("button[data-action][data-id]");
+    if (!button) return;
+
+    const scheduleId = Number(button.dataset.id);
+    const action = button.dataset.action;
+    if (!currentProfile || currentProfile.role !== "admin") {
+        showMessage("Only administrators can approve, reject, or cancel schedules.", "error");
+        return;
+    }
+    if (!Number.isInteger(scheduleId) || scheduleId <= 0) return;
+
+    const nextStatus = action === "approve"
+        ? "Approved"
+        : action === "reject" ? "Rejected" : "Cancelled";
+    const confirmation = action === "approve"
+        ? "Approve this schedule?"
+        : action === "reject" ? "Reject this schedule?" : "Cancel this approved schedule?";
+    if (!window.confirm(confirmation)) return;
+
+    button.disabled = true;
+    try {
+        const { error } = await supabaseClient
+            .from("schedules")
+            .update({ status: nextStatus })
+            .eq("schedule_id", scheduleId);
+        if (error) throw error;
+        showMessage(`Schedule ${nextStatus.toLowerCase()} successfully.`, "success");
+        await loadSchedules();
+    } catch (error) {
+        console.error("Schedule status update failed:", error);
+        showMessage("Could not update schedule: " + (error.message || "Unknown error"), "error");
+        button.disabled = false;
+    }
+});
+
+document.getElementById("refreshBtn").addEventListener("click", async () => {
+    try {
+        hideMessage();
+        await loadSchedules();
+        showMessage("Schedule list refreshed.", "success");
+    } catch (error) {
+        showMessage("Could not refresh schedules: " + error.message, "error");
+    }
+});
+
+document.getElementById("resetBtn").addEventListener("click", () => {
+    setTimeout(() => {
+        workDateInput.value = getManilaToday();
+        startTimeInput.value = "09:00";
+        endTimeInput.value = "17:00";
+        hideMessage();
+    }, 0);
+});
+
+document.getElementById("logoutBtn").addEventListener("click", async () => {
+    const button = document.getElementById("logoutBtn");
+    button.disabled = true;
+
+    try {
+        await signOutUser();
+        window.location.replace("page/login.html");
+    } catch (error) {
+        button.disabled = false;
+        showMessage("Could not log out: " + error.message, "error");
+    }
+});
+
+async function initializePage() {
+    workDateInput.value = getManilaToday();
+
+    try {
+        const allowed = await checkLogin();
+        if (!allowed) return;
+
+        await loadEmployees();
+        await loadSchedules();
+
+    } catch (error) {
+        console.error("Page initialization error:", error);
+
+        showMessage(
+            "Could not load the scheduling page: " +
+            (error.message || "Unknown error"),
+            "error"
+        );
+    }
+}
+
+initializePage();
+</script>
+
+</body>
+</html>

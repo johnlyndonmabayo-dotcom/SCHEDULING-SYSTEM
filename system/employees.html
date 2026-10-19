@@ -1,0 +1,87 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SCHEDULING | Employees</title>
+
+  <link rel="stylesheet" href="css/style.css">
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="database/supabase.js"></script>
+  <script src="script/employee.js" defer></script>
+</head>
+<body>
+  <main class="schedule-page">
+    <header class="page-header">
+      <a href="dashboard.html" style="display:inline-block;margin-bottom:14px;color:#2949a8;text-decoration:none;font-weight:600">← Back to Dashboard</a>
+      <p class="eyebrow">WORKSPACE / EMPLOYEES</p>
+      <h1>Employee Management</h1>
+      <p>Register and manage your employees.</p>
+    </header>
+
+    <form id="employeeForm" class="schedule-card">
+      <h2>Add Employee</h2>
+
+      <label for="fullName">Full Name</label>
+      <input
+        id="fullName"
+        type="text"
+        placeholder="Enter employee name"
+        maxlength="100"
+        required
+      >
+
+      <label for="position">Position</label>
+      <input
+        id="position"
+        type="text"
+        placeholder="e.g. Cashier"
+        maxlength="100"
+        required
+      >
+
+      <label for="department">Department</label>
+      <input
+        id="department"
+        type="text"
+        placeholder="e.g. Operations"
+        maxlength="100"
+        required
+      >
+
+      <p id="employeeMessage" role="status" aria-live="polite"></p>
+
+      <button id="saveEmployee" type="submit">
+        Add Employee
+      </button>
+    </form>
+
+    <section class="schedule-card" style="margin-top:24px">
+      <h2>Registered Employees</h2>
+
+      <div style="overflow-x:auto">
+        <table style="width:100%; border-collapse:collapse">
+          <thead>
+            <tr>
+              <th style="text-align:left;padding:12px">Name</th>
+              <th style="text-align:left;padding:12px">Position</th>
+              <th style="text-align:left;padding:12px">Department</th>
+              <th style="text-align:left;padding:12px">Status</th>
+              <th style="text-align:left;padding:12px">Action</th>
+            </tr>
+          </thead>
+          <tbody id="employeeList">
+            <tr>
+              <td colspan="5" style="padding:12px">
+                Loading employees...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
